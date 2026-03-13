@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: musicstats-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: musicdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - musicstats-network
+
+  listener:
+    build: .
+    container_name: musicstats-listener
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    networks:
+      - musicstats-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: musicstats-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    networks:
+      - musicstats-network
+
+volumes:
+  postgres_data:
+
+networks:
+  musicstats-network:
+    driver: bridge

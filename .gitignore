@@ -1,0 +1,22 @@
+# Виртуальное окружение
+venv/
+__pycache__/
+*.pyc
+
+# Секреты и конфиги
+.env
+.env.production
+*.log
+
+# Docker
+.DS_Store
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# SSL сертификаты (не коммитим!)
+ssl/

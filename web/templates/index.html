@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MusicStats</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>MusicStats</h1>
+            <button class="refresh-btn" onclick="loadAll()">🔄 Обновить</button>
+        </div>
+
+        <!-- Error message -->
+        <div id="error" class="error" style="display:none;"></div>
+
+        <!-- Total Stats Cards -->
+        <div class="total-stats" id="totalStats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTracks">-</div>
+                <div class="stat-label">ТРЕКОВ</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalArtists">-</div>
+                <div class="stat-label">ИСПОЛНИТЕЛЕЙ</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="firstTrack">-</div>
+                <div class="stat-label">ПЕРВЫЙ ТРЕК</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <h2>📊 Активность</h2>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Прослушиваний по дням</h3>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Топ часов</h3>
+                    <div class="chart-container">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Date Selector Section -->
+        <div class="date-selector-section">
+            <h2>📅 Детальный разбор по дням</h2>
+            <div class="date-selector">
+                <div class="selector-wrapper">
+                    <select id="dateSelect" class="date-select">
+                        <option value="">Выберите дату</option>
+                    </select>
+                    <button class="refresh-btn" onclick="loadDayStats()" id="loadDateBtn">
+                        <span class="btn-icon">🔍</span>
+                        Анализировать день
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Детальная статистика за день -->
+            <div id="dayStats" class="day-stats" style="display: none;">
+                <!-- Заголовок с общей информацией -->
+                <div class="day-header">
+                    <h3 id="selectedDateTitle"></h3>
+                    <div class="day-quick-stats">
+                        <div class="quick-stat">
+                            <span class="quick-stat-value" id="dayTotalTracks">0</span>
+                            <span class="quick-stat-label">треков</span>
+                        </div>
+                        <div class="quick-stat">
+                            <span class="quick-stat-value" id="dayUniqueArtists">0</span>
+                            <span class="quick-stat-label">исполнителей</span>
+                        </div>
+                        <div class="quick-stat">
+                            <span class="quick-stat-value" id="dayActiveHours">0</span>
+                            <span class="quick-stat-label">активных часов</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Сетка с тремя блоками -->
+                <div class="day-grid">
+                    <!-- Последние треки -->
+                    <div class="day-card">
+                        <div class="day-card-header">
+                            <span class="card-icon">🆕</span>
+                            <h4>Последние 5 треков</h4>
+                        </div>
+                        <div class="day-card-body" id="recentTracksDay">
+                            <div class="loading-mini">Загрузка...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Топ исполнителей дня -->
+                    <div class="day-card">
+                        <div class="day-card-header">
+                            <span class="card-icon">⭐</span>
+                            <h4>Топ исполнителей дня</h4>
+                        </div>
+                        <div class="day-card-body" id="topArtistsDay">
+                            <div class="loading-mini">Загрузка...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Топ треков дня -->
+                    <div class="day-card">
+                        <div class="day-card-header">
+                            <span class="card-icon">🔥</span>
+                            <h4>Топ треков дня</h4>
+                        </div>
+                        <div class="day-card-body" id="topTracksDay">
+                            <div class="loading-mini">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Временная шкала (если есть данные) -->
+                <div class="day-timeline" id="dayTimeline" style="display: none;">
+                    <h4>⏰ Активность по часам</h4>
+                    <div class="timeline-bars" id="timelineBars"></div>
+                </div>
+            </div>
+        </div>
+            
+            <!-- История за выбранную дату -->
+            <div id="dateHistory" class="date-history-card" style="display: none;">
+                <div class="card-header">
+                    <h3 id="selectedDateTitle"></h3>
+                    <span class="track-count" id="dateTrackCount"></span>
+                </div>
+                <div class="card-body" id="dateHistoryList">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="content-grid">
+            <!-- Last Tracks -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🎧 Последние треки</h2>
+                </div>
+                <div class="card-body">
+                    <div id="lastTracks" class="track-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Artists -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>⭐ Топ исполнители</h2>
+                </div>
+                <div class="card-body">
+                    <div id="topArtists" class="artist-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Tracks -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔥 Топ треки</h2>
+                </div>
+                <div class="card-body">
+                    <div id="topTracks" class="track-list">
+                        <div class="loading">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAPI(url) {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = `❌ Ошибка: ${message}`;
+        }
+        
+        async function loadLastTracks() {
+            try {
+                const data = await fetchAPI('/api/last?limit=10');
+                const html = data.map(item => 
+                    `<div class="track-item">
+                        <div class="track-info">
+                            <div class="track-name">${item.track}</div>
+                            <div class="artist-name">${item.artist}</div>
+                            <div class="track-time">${new Date(item.played_at).toLocaleString()}</div>
+                        </div>
+                    </div>`
+                ).join('');
+                document.getElementById('lastTracks').innerHTML = html;
+            } catch (e) {
+                document.getElementById('lastTracks').innerHTML = '<div class="error">Не удалось загрузить</div>';
+                showError(e.message);
+            }
+        }
+        
+        async function loadTopArtists() {
+            try {
+                const data = await fetchAPI('/api/top-artists?limit=10');
+                const html = data.map(item => 
+                    `<div class="artist-item">
+                        <span class="artist-name">${item.artist}</span>
+                        <span class="artist-plays">${item.plays}</span>
+                    </div>`
+                ).join('');
+                document.getElementById('topArtists').innerHTML = html;
+            } catch (e) {
+                document.getElementById('topArtists').innerHTML = '<div class="error">Не удалось загрузить</div>';
+                showError(e.message);
+            }
+        }
+        
+        async function loadTopTracks() {
+            try {
+                const data = await fetchAPI('/api/top-tracks?limit=10');
+                const html = data.map(item => 
+                    `<div class="track-item">
+                        <div class="track-info">
+                            <div class="track-name">${item.track}</div>
+                            <div class="artist-name">${item.artist}</div>
+                        </div>
+                        <span class="track-plays">${item.plays}</span>
+                    </div>`
+                ).join('');
+                document.getElementById('topTracks').innerHTML = html;
+            } catch (e) {
+                document.getElementById('topTracks').innerHTML = '<div class="error">Не удалось загрузить</div>';
+                showError(e.message);
+            }
+        }
+        
+        async function loadTotalStats() {
+            try {
+                const data = await fetchAPI('/api/stats/total');
+                document.getElementById('totalTracks').textContent = data.total_tracks;
+                document.getElementById('totalArtists').textContent = data.total_artists;
+                if (data.first_track) {
+                    const date = new Date(data.first_track);
+                    document.getElementById('firstTrack').textContent = date.toLocaleDateString();
+                }
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        async function loadDailyChart() {
+            try {
+                const data = await fetchAPI('/api/stats/daily?days=14');
+                const ctx = document.getElementById('dailyChart').getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.date),
+                        datasets: [{
+                            label: 'Прослушиваний',
+                            data: data.map(d => d.plays),
+                            borderColor: '#1DB954',
+                            backgroundColor: 'rgba(29, 185, 84, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#B3B3B3' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                grid: { color: '#333' },
+                                ticks: { color: '#B3B3B3' }
+                            },
+                            x: {
+                                grid: { color: '#333' },
+                                ticks: { color: '#B3B3B3' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load chart:', e);
+            }
+        }
+
+        async function loadHourlyChart() {
+            try {
+                // Сначала получим все треки и сгруппируем по часам
+                const lastTracks = await fetchAPI('/api/last?limit=100');
+                const hourlyData = {};
+                
+                for (let i = 0; i < 24; i++) {
+                    hourlyData[i] = 0;
+                }
+                
+                lastTracks.forEach(item => {
+                    const date = new Date(item.played_at);
+                    const hour = date.getHours();
+                    hourlyData[hour]++;
+                });
+                
+                const ctx = document.getElementById('hourlyChart').getContext('2d');
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                        datasets: [{
+                            label: 'Прослушиваний',
+                            data: Object.values(hourlyData),
+                            backgroundColor: '#1DB954',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#B3B3B3' }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                grid: { color: '#333' },
+                                ticks: { color: '#B3B3B3' }
+                            },
+                            x: {
+                                grid: { color: '#333' },
+                                ticks: { color: '#B3B3B3' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load hourly chart:', e);
+            }
+        }
+        
+        async function loadAll() {
+            document.getElementById('error').style.display = 'none';
+            await Promise.all([
+                loadLastTracks(),
+                loadTopArtists(),
+                loadTopTracks(),
+                loadTotalStats(),
+                loadDailyChart(),
+                loadHourlyChart(),
+                loadAvailableDates()
+            ]);
+        }
+        
+        // Загружаем при открытии страницы
+        loadAll();
+        
+        // Обновляем каждую минуту
+        setInterval(loadAll, 60000);
+
+        // Загрузка доступных дат
+async function loadAvailableDates() {
+    try {
+        const dates = await fetchAPI('/api/available-dates');
+        const select = document.getElementById('dateSelect');
+        
+        // Сортируем даты (свежие сверху)
+        dates.sort((a, b) => new Date(b) - new Date(a));
+        
+        select.innerHTML = '<option value="">Выберите дату</option>';
+        
+        dates.forEach(date => {
+            const option = document.createElement('option');
+            option.value = date;
+            
+            const d = new Date(date);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            let prefix = '';
+            if (d.toDateString() === today.toDateString()) {
+                prefix = '🔥 Сегодня, ';
+            } else if (d.toDateString() === yesterday.toDateString()) {
+                prefix = '📅 Вчера, ';
+            }
+            
+            const displayDate = d.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                weekday: 'long'
+            });
+            
+            option.textContent = prefix + displayDate;
+            select.appendChild(option);
+        });
+        
+        // Если есть хотя бы одна дата, можно показать статистику за сегодня автоматически
+        if (dates.length > 0 && dates[0] === new Date().toISOString().split('T')[0]) {
+            // Можно автоматически загрузить сегодня
+        }
+        
+    } catch (e) {
+        console.error('Failed to load dates:', e);
+        showError('Не удалось загрузить список дат');
+    }
+}
+
+// Загрузка истории за выбранную дату
+async function loadDateHistory() {
+    const dateSelect = document.getElementById('dateSelect');
+    const date = dateSelect.value;
+    
+    if (!date) {
+        alert('Пожалуйста, выберите дату');
+        return;
+    }
+    
+    const historyDiv = document.getElementById('dateHistory');
+    const titleEl = document.getElementById('selectedDateTitle');
+    const countEl = document.getElementById('dateTrackCount');
+    const listEl = document.getElementById('dateHistoryList');
+    
+    try {
+        historyDiv.style.display = 'block';
+        listEl.innerHTML = '<div class="loading">Загрузка...</div>';
+        
+        const tracks = await fetchAPI(`/api/history/${date}`);
+        
+        // Форматируем дату для заголовка
+        const displayDate = new Date(date).toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        titleEl.textContent = `История за ${displayDate}`;
+        countEl.textContent = `${tracks.length} ${getPlural(tracks.length, 'трек', 'трека', 'треков')}`;
+        
+        if (tracks.length === 0) {
+            listEl.innerHTML = '<div class="track-item">В этот день не было прослушиваний</div>';
+        } else {
+            const html = tracks.map(item => 
+                `<div class="track-item">
+                    <div class="track-info">
+                        <div class="track-name">${item.track}</div>
+                        <div class="artist-name">${item.artist}</div>
+                        <div class="track-time">${new Date(item.played_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                </div>`
+            ).join('');
+            listEl.innerHTML = html;
+        }
+    } catch (e) {
+        console.error('Failed to load history:', e);
+        listEl.innerHTML = '<div class="error">Ошибка загрузки</div>';
+        showError('Не удалось загрузить историю за выбранную дату');
+    }
+}
+
+// Вспомогательная функция для склонения
+function getPlural(number, one, two, five) {
+        let n = Math.abs(number);
+        n %= 100;
+        if (n >= 5 && n <= 20) {
+            return five;
+        }
+        n %= 10;
+        if (n === 1) {
+            return one;
+        }
+        if (n >= 2 && n <= 4) {
+            return two;
+        }
+        return five;
+}
+
+// Загрузка детальной статистики за день
+async function loadDayStats() {
+    const dateSelect = document.getElementById('dateSelect');
+    const date = dateSelect.value;
+    
+    if (!date) {
+        alert('Пожалуйста, выберите дату');
+        return;
+    }
+    
+    const dayStatsDiv = document.getElementById('dayStats');
+    const recentTracksEl = document.getElementById('recentTracksDay');
+    const topArtistsEl = document.getElementById('topArtistsDay');
+    const topTracksEl = document.getElementById('topTracksDay');
+    const timelineEl = document.getElementById('dayTimeline');
+    
+    try {
+        dayStatsDiv.style.display = 'block';
+        
+        // Показываем загрузку
+        recentTracksEl.innerHTML = '<div class="loading-mini">Загрузка...</div>';
+        topArtistsEl.innerHTML = '<div class="loading-mini">Загрузка...</div>';
+        topTracksEl.innerHTML = '<div class="loading-mini">Загрузка...</div>';
+        
+        const data = await fetchAPI(`/api/day-stats/${date}`);
+        
+        // Форматируем дату
+        const displayDate = new Date(date).toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long'
+        });
+        
+        // Заголовок и общая статистика
+        document.getElementById('selectedDateTitle').textContent = displayDate;
+        document.getElementById('dayTotalTracks').textContent = data.total_tracks;
+        document.getElementById('dayUniqueArtists').textContent = data.unique_artists;
+        document.getElementById('dayActiveHours').textContent = data.active_hours;
+        
+        // Последние треки
+        if (data.recent_tracks.length === 0) {
+            recentTracksEl.innerHTML = '<div class="track-item">Нет данных</div>';
+        } else {
+            recentTracksEl.innerHTML = data.recent_tracks.map(t => 
+                `<div class="track-item">
+                    <div class="track-info">
+                        <div class="track-name">${t.track}</div>
+                        <div class="artist-name">${t.artist}</div>
+                        <div class="track-time">${new Date(t.played_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                </div>`
+            ).join('');
+        }
+        
+        // Топ исполнителей
+        if (data.top_artists.length === 0) {
+            topArtistsEl.innerHTML = '<div class="track-item">Нет данных</div>';
+        } else {
+            topArtistsEl.innerHTML = data.top_artists.map(a => 
+                `<div class="artist-item">
+                    <span class="artist-name">${a.artist}</span>
+                    <span class="artist-plays">${a.plays}</span>
+                </div>`
+            ).join('');
+        }
+        
+        // Топ треков
+        if (data.top_tracks.length === 0) {
+            topTracksEl.innerHTML = '<div class="track-item">Нет данных</div>';
+        } else {
+            topTracksEl.innerHTML = data.top_tracks.map(t => 
+                `<div class="track-item">
+                    <div class="track-info">
+                        <div class="track-name">${t.track}</div>
+                        <div class="artist-name">${t.artist}</div>
+                    </div>
+                    <span class="track-plays">${t.plays}</span>
+                </div>`
+            ).join('');
+        }
+        
+        // Показываем/скрываем временную шкалу (если есть данные)
+        if (data.total_tracks > 0) {
+            // Здесь можно добавить генерацию временной шкалы
+            // Но для этого нужен отдельный эндпоинт с почасовой статистикой
+            timelineEl.style.display = 'none';
+        } else {
+            timelineEl.style.display = 'none';
+        }
+        
+    } catch (e) {
+        console.error('Failed to load day stats:', e);
+        recentTracksEl.innerHTML = '<div class="error">Ошибка загрузки</div>';
+        showError('Не удалось загрузить статистику за день');
+    }
+}
+
+</script>
+</body>
+</html>
